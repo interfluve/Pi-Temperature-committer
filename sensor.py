@@ -19,20 +19,53 @@ t = sensor.temperature()
 if not t:
     sys.exit("Temperature was not found")
 
+def update_data(t):
+    t_direction = 0
+    file_24_path = os.path.join(__data_dir__, 'temperature_24.json')
+    file_now_path = os.path.join(__data_dir__, 'temperature_now.json')
 
-def save_data(t):
-    file_path = os.path.join(__data_dir__, 'temperature.json')
+    try:
+        file_24 = open(file_24_path)
+        json_data = json.load(file_24)
+        file_24.close()
+    except:
+        json_data = []
 
-    json_data = json.dumps({
+    if json_data:
+        until_time = int(time.time()) - 86400
+        prev_t = json_data[-1]['t']
+
+        # Get new temperature direction
+        if prev_t < t:
+            t_direction = 1
+        elif prev_t > t:
+            t_direction = -1
+
+        # Remove old data
+        for (i, item) in enumerate(json_data):
+            if item['time'] <= until_time:
+                json_data.pop(i)
+            else:
+                break
+
+    new_data = {
         'time': int(time.time()),
         't': t
-    })
+    }
+    json_data.append(new_data)
 
-    file = open(file_path, 'w')
-    if file.write(json_data):
-        return file_path
+    file_24 = open(file_24_path, 'w')
+    if file_24.write(json.dumps(json_data, sort_keys=False)):
+        file_24.close()
 
-file_path = save_data(t)
+    new_data['direction'] = t_direction
 
-git_uploader = GitUploader(__data_dir__)
-git_uploader.commit()
+    file_now = open(file_now_path, 'w')
+    if file_now.write(json.dumps(new_data, sort_keys=False)):
+        file_now.close()
+
+    return True
+
+if update_data(t):
+    git_uploader = GitUploader(__data_dir__)
+    git_uploader.commit()
