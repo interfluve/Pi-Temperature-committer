@@ -1,5 +1,6 @@
 .env
 .idea
 __pycache__
+venv
 data/*
-!data/README.md
+!data/readme.md
